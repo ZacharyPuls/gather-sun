@@ -1,0 +1,13 @@
+[submodule "lib/glfw"]
+	path = lib/glfw
+	url = https://github.com/glfw/glfw
+[submodule "lib/glad"]
+	path = lib/glad
+	url = https://github.com/Dav1dde/glad
+	branch = glad2
+[submodule "lib/cglm"]
+	path = lib/cglm
+	url = https://github.com/recp/cglm
+[submodule "lib/stb"]
+	path = lib/stb
+	url = https://github.com/nothings/stb
