@@ -11,7 +11,7 @@
 mat4s model_matrix;
 mat4s projection_matrix;
 
-void initialize_graphics(GLADloadfunc load, float initial_viewport_width, float initial_viewport_height) {
+void initialize_graphics(GLADloadfunc load, int initial_viewport_width, int initial_viewport_height) {
     int version = gladLoadGL(load);
     if (version == 0) {
         printf("GLAD error - Failed to initialize OpenGL context\n");
@@ -20,13 +20,29 @@ void initialize_graphics(GLADloadfunc load, float initial_viewport_width, float 
 
     printf("GLAD - Loaded OpenGL %d.%d\n", GLAD_VERSION_MAJOR(version), GLAD_VERSION_MINOR(version));
     model_matrix = glms_mat4_identity();
-    projection_matrix = glms_mat4_identity();
-//    projection_matrix = glms_ortho_default(initial_viewport_width / initial_viewport_height);
+    resize_viewport(0, 0, initial_viewport_width, initial_viewport_height);
 }
 
 void resize_viewport(int x, int y, int width, int height) {
     glViewport(x, y, width, height);
-    projection_matrix = glms_ortho_default((float) width / (float) height);
+    projection_matrix = glms_ortho(-1.0f, 1.0f, -1.0f, 1.0f, -1.0f, 1.0f);
+    // TODO: this doesn't account for non-zero x and y values
+    // http://www.david-amador.com/2013/04/opengl-2d-independent-resolution-rendering/
+//    int vw = 1920;
+//    int vh = 1080;
+//    float target_aspect = (float)vw / (float)vh;
+//    int target_width = width;
+//    int target_height = (int)((float)width / target_aspect + 0.5f);
+//
+//    if (target_height > height) {
+//        target_height = height;
+//        target_width = (int)((float)height * target_aspect + 0.5f);
+//    }
+//
+//    int viewport_x = (int)(((float)width / 2.0f) - ((float)target_width / 2.0f));
+//    int viewport_y = (int)(((float)height / 2.0f) - ((float)target_height / 2.0f));
+//    glViewport(viewport_x, viewport_y, target_width, target_height);
+//    projection_matrix = glms_ortho(0.0f, (float)width, 0.0f, (float)height, -1.0f, 1.0f);
 }
 
 vbo_t create_vbo(GLenum target, GLenum usage) {
@@ -71,13 +87,20 @@ void draw_vao(vao_t vao, GLenum mode, GLint first, GLsizei count) {
     glDrawArrays(mode, first, count);
 }
 
-texture_t create_texture(const char *image_filename) {
-    texture_t result = {0};
+texture_t create_texture_2d(const char *image_filename, bool generate_mipmaps, bool flip_vertically) {
+    texture_t result = {
+            .target = GL_TEXTURE_2D,
+            .id = 0
+    };
 
     int width;
     int height;
     int num_channels;
-    stbi_set_flip_vertically_on_load(true);
+    if (flip_vertically) {
+        stbi_set_flip_vertically_on_load(true);
+    } else {
+        stbi_set_flip_vertically_on_load(false);
+    }
     unsigned char* pixels = stbi_load(image_filename, &width, &height, &num_channels, 0);
 
     if (pixels == NULL) {
@@ -93,19 +116,75 @@ texture_t create_texture(const char *image_filename) {
     glBindTexture(GL_TEXTURE_2D, result.id);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-//    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST_MIPMAP_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    if (generate_mipmaps) {
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    } else {
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    }
     glTexImage2D(GL_TEXTURE_2D, 0, internal_format, width, height, 0, format, GL_UNSIGNED_BYTE, pixels);
-//    glGenerateMipmap(GL_TEXTURE_2D);
+    if (generate_mipmaps) {
+        glGenerateMipmap(GL_TEXTURE_2D);
+    }
 
     stbi_image_free(pixels);
 
     return result;
 }
 
+texture_t create_texture_2d_array(const char** image_filenames, uint8_t num_images, bool generate_mipmaps, bool flip_vertically) {
+    // TODO: check to make sure each image in image_filenames is the same size
+    texture_t result = {
+            .target = GL_TEXTURE_2D_ARRAY,
+            .id = 0
+    };
+
+    if (flip_vertically) {
+        stbi_set_flip_vertically_on_load(true);
+    } else {
+        stbi_set_flip_vertically_on_load(false);
+    }
+
+    int width;
+    int height;
+    int num_channels;
+
+    stbi_info(*image_filenames, &width, &height, &num_channels);
+
+    // TODO: just hackily adding num_channels == 1 to ternary, really should make this cover all cases.
+    GLint internal_format = num_channels == 4 ? GL_RGBA8 : num_channels == 1 ? GL_RED : GL_RGB;
+
+    glCreateTextures(GL_TEXTURE_2D_ARRAY, 1, &result.id);
+    glBindTexture(GL_TEXTURE_2D_ARRAY, result.id);
+    glTexStorage3D(GL_TEXTURE_2D_ARRAY, 1, internal_format, width, height, num_images);
+    glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+    for (uint8_t image_index = 0; image_index < num_images; ++image_index) {
+        unsigned char *pixels = stbi_load(*image_filenames, &width, &height, &num_channels, 4);
+        GLenum format = num_channels == 4 ? GL_RGBA : num_channels == 1 ? GL_RED : GL_RGB;
+
+        if (pixels == NULL) {
+            printf("Failed to load image file with filename %s.", *image_filenames);
+            return result;
+        }
+
+        glTexSubImage3D(GL_TEXTURE_2D_ARRAY, 0, 0, 0, image_index, width, height, 1, format, GL_UNSIGNED_BYTE, pixels);
+
+        stbi_image_free(pixels);
+        ++image_filenames;
+    }
+
+    // TODO: mipmaps
+
+    return result;
+}
+
 void bind_texture(texture_t texture) {
-    glBindTexture(GL_TEXTURE_2D, texture.id);
+    glBindTexture(texture.target, texture.id);
 }
 
 GLuint compile_shader(GLenum type, const char *source_filename) {
@@ -207,7 +286,7 @@ void shader_uniform_mat4(GLint location, mat4s value) {
 
 void shader_uniform_texture(GLint location, texture_t value) {
     bind_texture(value);
-    glUniform1i(location, GL_TEXTURE0);
+    glUniform1i(location, 0);
 }
 
 mat4s get_model_projection_matrix() {

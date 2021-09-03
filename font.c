@@ -7,11 +7,17 @@
 #include "graphics.h"
 #include "scene.h"
 
-font_t load_font(scene_t* scene, const char* font_filename, const char* image_filename) {
+#include <cJSON.h>
+
+// TODO: maybe want to break out UI element texture and font texture loading?
+font_t font_load_bmfont(scene_t* scene, const char* font_filename, const char** image_filenames, uint8_t num_images) {
     font_t result = {0};
 
-    texture_t texture = create_texture(image_filename);
-    result.texture_id = add_texture(scene, texture);
+//    texture_t texture = create_texture_2d(image_filename, true, false);
+//    result.texture_id = scene_add_texture(scene, texture);
+
+    texture_t texture = create_texture_2d_array(image_filenames, num_images, false, false);
+    result.texture_id = scene_add_texture(scene, texture);
 
     FILE* font_file_pointer = NULL;
 
@@ -22,7 +28,7 @@ font_t load_font(scene_t* scene, const char* font_filename, const char* image_fi
     }
 
     if (!font_file_pointer) {
-        printf("Unknown error in load_font, font_file_pointer was NULL after fopen_s.\n");
+        printf("Unknown error in font_load_bmfont, font_file_pointer was NULL after fopen_s.\n");
         // TODO: error handling
         return result;
     }
@@ -95,7 +101,7 @@ font_t load_font(scene_t* scene, const char* font_filename, const char* image_fi
             result.chars[index].x = strtoul(x + 2, NULL, 10);
             result.chars[index].y = strtoul(y + 2, NULL, 10);
             result.chars[index].width = strtoul(width + 6, NULL, 10);
-            result.chars[index].height = strtoul(height + 6, NULL, 10);
+            result.chars[index].height = strtoul(height + 7, NULL, 10);
             result.chars[index].x_offset = strtol(x_offset + 8, NULL, 10);
             result.chars[index].y_offset = strtol(y_offset + 8, NULL, 10);
             result.chars[index].x_advance = strtoul(x_advance + 9, NULL, 10);
@@ -104,5 +110,68 @@ font_t load_font(scene_t* scene, const char* font_filename, const char* image_fi
         line = strtok_s(NULL, newline, &next_token);
     }
 
+    free(font_file);
+    return result;
+}
+
+font_t font_load_msdf(scene_t *scene, const char *font_filename, const char **image_filenames, uint8_t num_images) {
+    font_t result = {0};
+    texture_t texture = create_texture_2d_array(image_filenames, num_images, false, true);
+    result.texture_id = scene_add_texture(scene, texture);
+
+    FILE* font_file_pointer = NULL;
+
+    if (fopen_s(&font_file_pointer, font_filename, "r") != 0) {
+        printf("Could not open font file for reading with filename %s.\n", font_filename);
+        // TODO: error handling
+        return result;
+    }
+
+    if (!font_file_pointer) {
+        printf("Unknown error in font_load_msdf, font_file_pointer was NULL after fopen_s.\n");
+        // TODO: error handling
+        return result;
+    }
+
+    fseek(font_file_pointer, 0, SEEK_END);
+    int64_t length = ftell(font_file_pointer);
+    fseek(font_file_pointer, 0, SEEK_SET);
+    char* font_file = (char*)malloc(sizeof(char) * length + 1);
+
+    if (!font_file) {
+        printf("Failed to malloc %llu bytes for reading font file with filename %s.\n", sizeof(char) * length + 1, font_filename);
+        fclose(font_file_pointer);
+        // TODO: error handling
+        return result;
+    }
+
+    fread_s(font_file, sizeof(char) * length, sizeof(char), length, font_file_pointer);
+    fclose(font_file_pointer);
+
+    font_file[length] = '\0';
+    cJSON* json = cJSON_Parse(font_file);
+
+    if (json == NULL)
+    {
+        const char *error_ptr = cJSON_GetErrorPtr();
+        if (error_ptr != NULL)
+        {
+            printf("Error in parsing font file json with filename %s, error is before: %s\n", font_filename, error_ptr);
+        }
+    } else {
+        // TODO: much better JSON parsing error handling
+        cJSON* atlas = cJSON_GetObjectItem(json, "atlas");
+        cJSON* width = cJSON_GetObjectItem(json, "width");
+        result.scale_w = width->valueint;
+        cJSON* height = cJSON_GetObjectItem(json, "height");
+        result.scale_h = height->valueint;
+        cJSON* metrics = cJSON_GetObjectItem(json, "metrics");
+        cJSON* line_height = cJSON_GetObjectItem(metrics, "lineHeight");
+        result.line_height = (float)line_height->valuedouble;
+    }
+
+    cJSON_Delete(json);
+
+    free(font_file);
     return result;
 }

@@ -35,17 +35,45 @@ typedef struct tag_font {
     glyph_t chars[256];
 } font_t;
 
+// TODO: stop being lazy, and just merge these structs
+typedef struct tag_msdf_font {
+    float distance_range;
+    float size;
+    uint16_t width;
+    uint16_t height;
+    float em_size;
+    float line_height;
+    float ascent;
+    float descent;
+
+    // TODO: UTF-8 support...I know this is on everyone's todo list, but I just want to be able to finish this demo...
+//    msdf_glyph_t chars[256];
+} msdf_font_t;
+
 // TODO: for future support of pages, will need to pass a const char** image_filenames (_0.png, _1.png, _2.png, etc)
 // TODO: should I really be coupling this class to scene_t? A naive solution to this would be having the user pass in \
 //              a previously-added texture ID
-font_t load_font(scene_t* scene, const char* font_filename, const char* image_filename);
+font_t font_load_bmfont(scene_t* scene, const char* font_filename, const char** image_filenames, uint8_t num_images);
+font_t font_load_msdf(scene_t* scene, const char* font_filename, const char** image_filenames, uint8_t num_images);
 
 inline vec4f_t get_font_glyph_texcoord_bounds(font_t font, int glyph) {
+    glyph_t ch = font.chars[glyph];
     vec4f_t result = {
-            (float)font.chars[glyph].x / (float)font.scale_w,
-            (float)font.chars[glyph].y / (float)font.scale_h,
-            ((float)font.chars[glyph].x + (float)font.chars[glyph].width) / (float)font.scale_w,
-            ((float)font.chars[glyph].y + (float)font.chars[glyph].height) / (float)font.scale_h
+            (float)ch.x / (float)font.scale_w,
+            (float)(ch.y + ch.height) / (float)font.scale_h,
+            (float)(ch.x + ch.width) / (float)font.scale_w,
+            (float)ch.y / (float)font.scale_h
+
+    };
+    return result;
+}
+
+inline vec4u_t get_font_glyph_position_bounds(font_t font, int glyph, vec2u_t position, float scale) {
+    vec4u_t result = {
+            position.x + (uint32_t)((float)font.chars[glyph].x_offset * scale),
+            position.y + (uint32_t)((float)(font.base - font.chars[glyph].y_offset - font.chars[glyph].height) * scale),
+            position.x + (uint32_t)((float)(font.chars[glyph].x_offset + font.chars[glyph].width) * scale),
+            position.y + (uint32_t)((float)(font.base - font.chars[glyph].y_offset) * scale)
     };
     return result;
 }

@@ -4,8 +4,9 @@
 #include "window.h"
 #include "scene.h"
 #include "renderer.h"
-
-scene_t* scene;
+#include "event.h"
+#include "ui.h"
+#include "state.h"
 
 uint64_t player_texture_id = 0UL;
 uint64_t player_sprite_id = 0UL;
@@ -23,68 +24,85 @@ void translate_model_matrix(float x, float y, float z) {
 }
 
 void update_frame(double delta_time) {
+    // TODO: maybe break the update function out into a separate module?
+    if (!game_state.tick_active) {
+        return;
+    }
+    // TODO: maybe break out user input into a 'controller' module?
     const float speed = 0.01f;
     if (app_window.keys[GLFW_KEY_W]) {
-        set_entity_direction(scene, player_entity_id, UP);
-        update_entity_position(scene, player_entity_id, delta_time);
-        set_entity_moving(scene, player_entity_id, true);
+        scene_entity_set_direction(game_state.scene, player_entity_id, UP);
+        scene_entity_update_position(game_state.scene, player_entity_id, delta_time);
+        scene_entity_set_moving(game_state.scene, player_entity_id, true);
     }
 
     if (app_window.keys[GLFW_KEY_A]) {
-        set_entity_direction(scene, player_entity_id, LEFT);
-        update_entity_position(scene, player_entity_id, delta_time);
-        set_entity_moving(scene, player_entity_id, true);
+        scene_entity_set_direction(game_state.scene, player_entity_id, LEFT);
+        scene_entity_update_position(game_state.scene, player_entity_id, delta_time);
+        scene_entity_set_moving(game_state.scene, player_entity_id, true);
     }
 
     if (app_window.keys[GLFW_KEY_S]) {
-        set_entity_direction(scene, player_entity_id, DOWN);
-        update_entity_position(scene, player_entity_id, delta_time);
-        set_entity_moving(scene, player_entity_id, true);
+        scene_entity_set_direction(game_state.scene, player_entity_id, DOWN);
+        scene_entity_update_position(game_state.scene, player_entity_id, delta_time);
+        scene_entity_set_moving(game_state.scene, player_entity_id, true);
     }
 
     if (app_window.keys[GLFW_KEY_D]) {
-        set_entity_direction(scene, player_entity_id, RIGHT);
-        update_entity_position(scene, player_entity_id, delta_time);
-        set_entity_moving(scene, player_entity_id, true);
+        scene_entity_set_direction(game_state.scene, player_entity_id, RIGHT);
+        scene_entity_update_position(game_state.scene, player_entity_id, delta_time);
+        scene_entity_set_moving(game_state.scene, player_entity_id, true);
     }
 
     if (!app_window.keys[GLFW_KEY_W] && !app_window.keys[GLFW_KEY_A] && !app_window.keys[GLFW_KEY_S] && !app_window.keys[GLFW_KEY_D]) {
-        set_entity_moving(scene, player_entity_id, false);
+        scene_entity_set_moving(game_state.scene, player_entity_id, false);
     }
 }
 
 void render() {
-    render_frame(scene, player_texture_id);
+    renderer_render_frame(game_state.scene, game_state.renderer, game_state.ui);
+}
+
+void mouse_input(int button, int action, int mods) {
+    float x = (float)app_window.mouse[0] / (float)app_window.width * 2.0f - 1.0f;
+    float y = ((float)app_window.height - (float)app_window.mouse[1]) / (float)app_window.height * 2.0f - 1.0f;
+    bool left_mouse_pressed = button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_PRESS;
+    bool right_mouse_pressed = button == GLFW_MOUSE_BUTTON_RIGHT && action == GLFW_PRESS;
+    state_handle_mouse_input(x, y, left_mouse_pressed, right_mouse_pressed);
+}
+
+void keyboard_input(int key, int scancode, int action, int mods) {
+    state_handle_keyboard_input(key, scancode, action, mods);
 }
 
 int main() {
-    setup_window("Minecraft", 640, 480, initialize_graphics, update_frame, render, resize_viewport);
+    setup_window("Minecraft", 1920, 1080, true, initialize_graphics, update_frame, render, resize_viewport, mouse_input, keyboard_input);
 
-    scene = (scene_t*)malloc(sizeof(scene_t));
-    begin_scene(scene);
+    game_state.scene = (scene_t*)malloc(sizeof(scene_t));
+    scene_init(game_state.scene);
 
     // temp background texture - 20x wide as player, 6x as tall as player (player is 1 tile wide, 2 tiles tall)
-    texture_t background_texture = create_texture("res/img/temp-background.png");
-    background_texture_id = add_texture(scene, background_texture);
+    texture_t background_texture = create_texture_2d("res/img/temp-background.png", false, true);
+    background_texture_id = scene_add_texture(game_state.scene, background_texture);
 
     sprite_t background_sprite = {
             .texture_id = background_texture_id,
-            .position = {-5.0f, -3.0f, 0.0f},
-            .size = {10.0f, 6.0f},
+            .position = {0.0f, 0.0f, 0.0f},
+            .size = {10.0f, 5.0f},
             .keyframe = 0,
             .num_keyframes = 1,
             .cycle = 0,
             .num_cycles = 1,
             .animation_speed = 0.0
     };
-    background_sprite_id = add_sprite(scene, background_sprite);
+    background_sprite_id = scene_add_sprite(game_state.scene, background_sprite);
 
-    texture_t player_texture = create_texture("res/img/Player.png");
-    player_texture_id = add_texture(scene, player_texture);
+    texture_t player_texture = create_texture_2d("res/img/Player.png", false, true);
+    player_texture_id = scene_add_texture(game_state.scene, player_texture);
 
     sprite_t player_sprite = {
             .texture_id = player_texture_id,
-            .position = {-0.25f, -0.5f, 0.0f},
+            .position = {0.0f, 0.0f, 0.0f},
             .size = {0.5f, 1.0f},
             .keyframe = 0,
             .num_keyframes = 12,
@@ -92,48 +110,32 @@ int main() {
             .num_cycles = 4,
             .animation_speed = 0.2
     };
-    player_sprite_id = add_sprite(scene, player_sprite);
+    player_sprite_id = scene_add_sprite(game_state.scene, player_sprite);
 
     entity_t player_entity = {
             .sprite_id = player_sprite_id,
             .moving = false,
             .direction = UP,
-            .speed = 0.5f
+            .speed = 0.15f
     };
-    player_entity_id = add_entity(scene, player_entity);
+    player_entity_id = scene_add_entity(game_state.scene, player_entity);
 
-    // TODO: for some reason, calling create_font() in startup_renderer was causing the model matrix to not be updated \
-    //  for the player sprite. Moving startup_renderer() down here to (hopefully) fix this until I implement a proper camera.
-    startup_renderer(scene);
+    camera_t player_camera = {
+            .position = player_sprite.position,
+            .following_entity_id = player_entity_id
+    };
+    uint64_t player_camera_id = scene_add_camera(game_state.scene, player_camera);
+    scene_set_active_camera(game_state.scene, player_camera_id);
 
-
-//    shader = create_shader("res/shader/default/default.vs", "res/shader/default/default.fs");
-//
-//    cobble = create_texture("res/img/cobble.png");
-//
-//    float vertices[] = {-0.5f, -0.5f, 0.0f, 0.0f, 0.0f,
-//                        0.5f, -0.5f, 0.0f, 1.0f, 0.0f,
-//                        -0.5f, 0.5f, 0.0f, 0.0f, 1.0f,
-//                        0.5f, -0.5f, 0.0f, 1.0f, 0.0f,
-//                        0.5f, 0.5f, 0.0f, 1.0f, 1.0f,
-//                        -0.5f, 0.5f, 0.0f, 0.0f, 1.0f};
-//
-//    vbo_t vbo = create_vbo(GL_ARRAY_BUFFER, GL_STATIC_DRAW);
-//    fill_vbo(vbo, sizeof(float) * (6 * 5), vertices);
-//
-//    vao = create_vao();
-//    bind_vao(vao);
-//    bind_vbo(vbo);
-//    vbo_set_vertex_attrib(vbo, 0, 3, GL_FLOAT, sizeof(float) * 5, 0);
-//    vbo_set_vertex_attrib(vbo, 1, 2, GL_FLOAT, sizeof(float) * 5, sizeof(float) * 3);
+    state_init(game_state.scene);
 
     main_loop();
 
-    shutdown_renderer();
+    scene_deinit(game_state.scene);
+    free(game_state.scene);
+    game_state.scene = NULL;
 
-    end_scene(scene);
-    free(scene);
-    scene = NULL;
+    state_deinit();
 
     return 0;
 }

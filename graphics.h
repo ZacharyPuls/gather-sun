@@ -8,7 +8,7 @@
 #include <glad/gl.h>
 #include <cglm/struct.h>
 
-void initialize_graphics(GLADloadfunc load, float initial_viewport_width, float initial_viewport_height);
+void initialize_graphics(GLADloadfunc load, int initial_viewport_width, int initial_viewport_height);
 void resize_viewport(int x, int y, int width, int height);
 
 typedef struct tag_vbo {
@@ -32,10 +32,12 @@ void bind_vao(vao_t vao);
 void draw_vao(vao_t vao, GLenum mode, GLint first, GLsizei count);
 
 typedef struct tag_texture {
+    GLenum target;
     GLuint id;
 } texture_t;
 
-texture_t create_texture(const char* image_filename);
+texture_t create_texture_2d(const char* image_filename, bool generate_mipmaps, bool flip_vertically);
+texture_t create_texture_2d_array(const char** image_filenames, uint8_t num_images, bool generate_mipmaps, bool flip_vertically);
 void bind_texture(texture_t texture);
 
 typedef struct tag_shader {

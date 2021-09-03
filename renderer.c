@@ -5,27 +5,28 @@
 #include <stb_ds.h>
 #include "renderer.h"
 #include "font.h"
+#include "ui.h"
+#include "window.h"
 
-uint64_t default_shader_id = 0UL;
+// TODO: wrap this in NDEBUG ifndef
+void GLAPIENTRY opengl_debug_callback(GLenum source, GLenum type, GLuint id, GLenum severity, GLsizei length,
+                                      const GLchar *message, const void *user_param) {
+    fprintf(stderr, "GL CALLBACK: %s type = 0x%x, severity = 0x%x, message = %s\n",
+            (type == GL_DEBUG_TYPE_ERROR ? "** GL ERROR **" : ""), type, severity, message);
+}
 
-// TODO: probably want to have a pool of VBOs/VAOs that get recycled each frame
-uint64_t sprite_vbo_id = 0UL;
-uint64_t sprite_vao_id = 0UL;
-uint64_t ui_vbo_id = 0UL;
-uint64_t ui_vao_id = 0UL;
-
-font_t default_font;
-
-void startup_renderer(scene_t* scene) {
-
+void renderer_init(renderer_t* renderer, scene_t* scene) {
     shader_t default_shader = create_shader("res/shader/default/default.vs", "res/shader/default/default.fs");
-    default_shader_id = add_shader(scene, default_shader);
+    renderer->default_shader_id = scene_add_shader(scene, default_shader);
+
+    shader_t font_shader = create_shader("res/shader/text/text.vs", "res/shader/text/text.fs");
+    renderer->text_shader_id = scene_add_shader(scene, font_shader);
 
     vbo_t sprite_vbo = create_vbo(GL_ARRAY_BUFFER, GL_DYNAMIC_DRAW);
-    sprite_vbo_id = add_vbo(scene, sprite_vbo);
+    renderer->sprite_vbo_id = scene_add_vbo(scene, sprite_vbo);
 
     vao_t sprite_vao = create_vao();
-    sprite_vao_id = add_vao(scene, sprite_vao);
+    renderer->sprite_vao_id = scene_add_vao(scene, sprite_vao);
 
     bind_vao(sprite_vao);
     bind_vbo(sprite_vbo);
@@ -36,21 +37,25 @@ void startup_renderer(scene_t* scene) {
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-    default_font = load_font(scene, "res/font/fira-code-medium.fnt", "res/font/fira-code-medium_0.png");
+    glEnable(GL_MULTISAMPLE);
+
+    glEnable(GL_DEBUG_OUTPUT);
+    glDebugMessageCallback(opengl_debug_callback, NULL);
 
     vbo_t ui_vbo = create_vbo(GL_ARRAY_BUFFER, GL_DYNAMIC_DRAW);
-    ui_vbo_id = add_vbo(scene, ui_vbo);
+    renderer->ui_vbo_id = scene_add_vbo(scene, ui_vbo);
 
     vao_t ui_vao = create_vao();
-    ui_vao_id = add_vao(scene, ui_vao);
+    renderer->ui_vao_id = scene_add_vao(scene, ui_vao);
 
     bind_vao(ui_vao);
     bind_vbo(ui_vbo);
-    vbo_set_vertex_attrib(ui_vbo, 0, 3, GL_FLOAT, sizeof(float) * 5, 0);
-    vbo_set_vertex_attrib(ui_vbo, 1, 2, GL_FLOAT, sizeof(float) * 5, sizeof(float) * 3);
+    vbo_set_vertex_attrib(ui_vbo, 0, 3, GL_FLOAT, sizeof(float) * 9, 0);
+    vbo_set_vertex_attrib(ui_vbo, 1, 3, GL_FLOAT, sizeof(float) * 9, sizeof(float) * 3);
+    vbo_set_vertex_attrib(ui_vbo, 2, 3, GL_FLOAT, sizeof(float) * 9, sizeof(float) * 6);
 }
 
-void regenerate_vertices(scene_t* scene) {
+void regenerate_vertices(scene_t* scene, renderer_t* renderer, ui_t* ui) {
     size_t num_sprites = hmlenu(scene->sprite_map);
     float* buffer = (float*)malloc(sizeof(float) * num_sprites * 30);
     for (size_t i = 0; i < num_sprites; i++) {
@@ -72,43 +77,59 @@ void regenerate_vertices(scene_t* scene) {
         buffer[i * 30 + 20] = x1; buffer[i * 30 + 21] = y1; buffer[i * 30 + 22] = z; buffer[i * 30 + 23] = s1; buffer[i * 30 + 24] = t1;
         buffer[i * 30 + 25] = x0; buffer[i * 30 + 26] = y1; buffer[i * 30 + 27] = z; buffer[i * 30 + 28] = s0; buffer[i * 30 + 29] = t1;
     }
-    vbo_t sprite_vbo = get_vbo(scene, sprite_vbo_id);
+    vbo_t sprite_vbo = scene_get_vbo(scene, renderer->sprite_vbo_id);
     bind_vbo(sprite_vbo);
     fill_vbo(sprite_vbo, sizeof(float) * num_sprites * 30, buffer);
     free(buffer);
+    
+    // TODO: remove this, temporary test
+
+    size_t ui_vbo_size = sizeof(float) * 9 * ui_get_num_vertices(ui);
+    buffer = (float*)malloc(ui_vbo_size);
+//    printf("malloc %lli bytes for ui_vbo\n", ui_vbo_size);
+    // TODO: definitely don't break separation of concerns by using app_window like this, outside this test
+    ui_generate_vertices(ui, buffer, app_window.width, app_window.height);
+
+    vbo_t ui_vbo = scene_get_vbo(scene, renderer->ui_vbo_id);
+    bind_vbo(ui_vbo);
+    fill_vbo(ui_vbo, ui_vbo_size, buffer);
+    free(buffer);
 }
 
-void render_frame(scene_t* scene, /* TODO: Remove this parameter */ uint64_t player_sprite_id) {
-    regenerate_vertices(scene);
+void renderer_render_frame(scene_t* scene, renderer_t* renderer, ui_t* ui) {
+    regenerate_vertices(scene, renderer, ui);
     glClear(GL_COLOR_BUFFER_BIT);
-    bind_shader(get_shader(scene, default_shader_id));
 
-    // TODO: remove this, and put this logic in a camera struct/methods
-    sprite_t player_sprite = get_sprite(scene, player_sprite_id);
+    // TODO: error handling for no active camera?
+    camera_t active_camera = scene_get_active_camera(scene);
+    vec3s translation = {-active_camera.position.x, -active_camera.position.y, -active_camera.position.z};
+    model_matrix = glms_translate(glms_mat4_identity(), translation);
 
+    bind_shader(scene_get_shader(scene, renderer->default_shader_id));
     shader_uniform_mat4(0, get_model_projection_matrix());
 
-    vao_t sprite_vao = get_vao(scene, sprite_vao_id);
+    vao_t sprite_vao = scene_get_vao(scene, renderer->sprite_vao_id);
     bind_vao(sprite_vao);
 
     for (uint64_t i = 0; i < hmlenu(scene->sprite_map); i++) {
-        if (i == player_sprite_id) {
-            vec3s translation = glms_vec3_zero();
-            translation.x = -player_sprite.position.x;
-            translation.y = -player_sprite.position.y;
-            translation.z = -player_sprite.position.z;
-            model_matrix = glms_translate(glms_mat4_identity(), translation);
-        } else {
-            model_matrix = glms_mat4_identity();
-        }
-        sprite_t sprite = get_sprite(scene, i);
-        shader_uniform_texture(1, get_texture(scene, sprite.texture_id));
+        sprite_t sprite = scene_get_sprite(scene, i);
+        shader_uniform_texture(1, scene_get_texture(scene, sprite.texture_id));
 
         // TODO: bounds checking (UINT32_MAX) and narrowing cast to GLsizei
         draw_vao(sprite_vao, GL_TRIANGLES, 6 * (int32_t)i, 6);
     }
+
+    bind_shader(scene_get_shader(scene, renderer->text_shader_id));
+    model_matrix = glms_mat4_identity();
+    shader_uniform_mat4(0, get_model_projection_matrix());
+    vao_t ui_vao = scene_get_vao(scene, renderer->ui_vao_id);
+    bind_vao(ui_vao);
+    // TODO: this is not going to work if there are multiple fonts for different menus. \
+    //  Consider setting this in a UBO.
+    shader_uniform_texture(1, scene_get_texture(scene, ui_get_font(ui, ui_get_menu(ui, 0).font_id).texture_id));
+    draw_vao(ui_vao, GL_TRIANGLES, 0, ui_get_num_vertices(ui));
 }
 
-void shutdown_renderer() {
+void renderer_deinit(renderer_t* renderer) {
 
 }

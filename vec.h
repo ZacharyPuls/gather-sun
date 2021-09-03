@@ -5,6 +5,8 @@
 #ifndef MINECRAFT_VEC_H
 #define MINECRAFT_VEC_H
 
+#include <stdint.h>
+
 typedef struct tag_vec2f {
     float x;
     float y;
@@ -27,5 +29,12 @@ typedef struct tag_vec2u {
     uint32_t x;
     uint32_t y;
 } vec2u_t;
+
+typedef struct tag_vec4u {
+    uint32_t x;
+    uint32_t y;
+    uint32_t z;
+    uint32_t w;
+} vec4u_t;
 
 #endif //MINECRAFT_VEC_H
