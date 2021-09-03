@@ -2,8 +2,8 @@
 // Created by zach on 2021-05-15.
 //
 
-#ifndef MINECRAFT_SPRITE_H
-#define MINECRAFT_SPRITE_H
+#ifndef GATHER_SUN_SPRITE_H
+#define GATHER_SUN_SPRITE_H
 
 #include <stdint.h>
 #include "vec.h"
@@ -39,4 +39,4 @@ inline vec4f_t get_sprite_texcoord_bounds(sprite_t sprite) {
     return result;
 }
 
-#endif //MINECRAFT_SPRITE_H
+#endif //GATHER_SUN_SPRITE_H

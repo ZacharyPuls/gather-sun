@@ -2,8 +2,8 @@
 // Created by zach on 2021-06-06.
 //
 
-#ifndef MINECRAFT_FONT_H
-#define MINECRAFT_FONT_H
+#ifndef GATHER_SUN_FONT_H
+#define GATHER_SUN_FONT_H
 
 #include <stdint.h>
 #include "scene.h"
@@ -78,4 +78,4 @@ inline vec4u_t get_font_glyph_position_bounds(font_t font, int glyph, vec2u_t po
     return result;
 }
 
-#endif //MINECRAFT_FONT_H
+#endif //GATHER_SUN_FONT_H

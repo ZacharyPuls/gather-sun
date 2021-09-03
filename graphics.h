@@ -2,8 +2,8 @@
 // Created by zach on 2021-04-24.
 //
 
-#ifndef MINECRAFT_GRAPHICS_H
-#define MINECRAFT_GRAPHICS_H
+#ifndef GATHER_SUN_GRAPHICS_H
+#define GATHER_SUN_GRAPHICS_H
 
 #include <glad/gl.h>
 #include <cglm/struct.h>
@@ -54,4 +54,4 @@ extern mat4s projection_matrix;
 
 mat4s get_model_projection_matrix();
 
-#endif //MINECRAFT_GRAPHICS_H
+#endif //GATHER_SUN_GRAPHICS_H

@@ -2,8 +2,8 @@
 // Created by zach on 2021-06-05.
 //
 
-#ifndef MINECRAFT_ENTITY_H
-#define MINECRAFT_ENTITY_H
+#ifndef GATHER_SUN_ENTITY_H
+#define GATHER_SUN_ENTITY_H
 
 #include <stdint.h>
 #include <stdbool.h>
@@ -24,4 +24,4 @@ typedef struct tag_entity {
     float speed;
 } entity_t;
 
-#endif //MINECRAFT_ENTITY_H
+#endif //GATHER_SUN_ENTITY_H

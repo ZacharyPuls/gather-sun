@@ -2,8 +2,8 @@
 // Created by zach on 2021-05-16.
 //
 
-#ifndef MINECRAFT_RENDERER_H
-#define MINECRAFT_RENDERER_H
+#ifndef GATHER_SUN_RENDERER_H
+#define GATHER_SUN_RENDERER_H
 
 #include "graphics.h"
 #include "scene.h"
@@ -25,4 +25,4 @@ void renderer_init(renderer_t* renderer, scene_t* scene);
 void renderer_render_frame(scene_t* scene, renderer_t* renderer, ui_t* ui);
 void renderer_deinit(renderer_t* renderer);
 
-#endif //MINECRAFT_RENDERER_H
+#endif //GATHER_SUN_RENDERER_H

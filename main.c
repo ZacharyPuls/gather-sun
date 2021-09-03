@@ -76,7 +76,7 @@ void keyboard_input(int key, int scancode, int action, int mods) {
 }
 
 int main() {
-    setup_window("Minecraft", 1920, 1080, true, initialize_graphics, update_frame, render, resize_viewport, mouse_input, keyboard_input);
+    setup_window("Gather Sun", 1920, 1080, true, initialize_graphics, update_frame, render, resize_viewport, mouse_input, keyboard_input);
 
     game_state.scene = (scene_t*)malloc(sizeof(scene_t));
     scene_init(game_state.scene);

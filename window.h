@@ -2,8 +2,8 @@
 // Created by zach on 2021-04-24.
 //
 
-#ifndef MINECRAFT_WINDOW_H
-#define MINECRAFT_WINDOW_H
+#ifndef GATHER_SUN_WINDOW_H
+#define GATHER_SUN_WINDOW_H
 
 #include <stdbool.h>
 #include <GLFW/glfw3.h>
@@ -43,4 +43,4 @@ void cursor_callback(GLFWwindow* window, double xpos, double ypos);
 void mouse_button_callback(GLFWwindow* window, int button, int action, int mods);
 void resize_callback(GLFWwindow *window, int width, int height);
 
-#endif //MINECRAFT_WINDOW_H
+#endif //GATHER_SUN_WINDOW_H

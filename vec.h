@@ -2,8 +2,8 @@
 // Created by zach on 2021-05-16.
 //
 
-#ifndef MINECRAFT_VEC_H
-#define MINECRAFT_VEC_H
+#ifndef GATHER_SUN_VEC_H
+#define GATHER_SUN_VEC_H
 
 #include <stdint.h>
 
@@ -37,4 +37,4 @@ typedef struct tag_vec4u {
     uint32_t w;
 } vec4u_t;
 
-#endif //MINECRAFT_VEC_H
+#endif //GATHER_SUN_VEC_H

@@ -2,8 +2,8 @@
 // Created by zach on 2021-06-19.
 //
 
-#ifndef MINECRAFT_STATE_H
-#define MINECRAFT_STATE_H
+#ifndef GATHER_SUN_STATE_H
+#define GATHER_SUN_STATE_H
 
 #include "scene.h"
 #include "renderer.h"
@@ -41,4 +41,4 @@ void state_handle_pause_menu_exit_button(void* menu_ptr);
 
 void state_deinit();
 
-#endif //MINECRAFT_STATE_H
+#endif //GATHER_SUN_STATE_H

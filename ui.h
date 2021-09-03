@@ -2,8 +2,8 @@
 // Created by zach on 2021-06-06.
 //
 
-#ifndef MINECRAFT_UI_H
-#define MINECRAFT_UI_H
+#ifndef GATHER_SUN_UI_H
+#define GATHER_SUN_UI_H
 
 #include "vec.h"
 #include "scene.h"
@@ -366,4 +366,4 @@ inline void ui_generate_vertices(ui_t* ui, float* vertices, uint32_t width, uint
 
 void ui_deinit(ui_t* ui);
 
-#endif //MINECRAFT_UI_H
+#endif //GATHER_SUN_UI_H

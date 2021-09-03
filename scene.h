@@ -2,8 +2,8 @@
 // Created by zach on 2021-05-16.
 //
 
-#ifndef MINECRAFT_SCENE_H
-#define MINECRAFT_SCENE_H
+#ifndef GATHER_SUN_SCENE_H
+#define GATHER_SUN_SCENE_H
 
 #include "graphics.h"
 #include "sprite.h"
@@ -124,4 +124,4 @@ void scene_set_active_camera(scene_t* scene, uint64_t camera_id);
 
 void scene_deinit(scene_t* scene);
 
-#endif //MINECRAFT_SCENE_H
+#endif //GATHER_SUN_SCENE_H
