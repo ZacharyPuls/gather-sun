@@ -5,6 +5,8 @@ set(CMAKE_C_STANDARD 11)
 
 add_executable(gather-sun main.c window.h window.c graphics.c graphics.h sprite.h scene.c scene.h vec.h renderer.c renderer.h entity.h player.h font.c font.h ui.h ui.c event.c event.h state.c state.h camera.c camera.h)
 
+# GLAD CMake project requires python3 + jinja2
+find_package(Python3 COMPONENTS Interpreter jinja2)
 add_subdirectory(lib/glad/cmake)
 glad_add_library(glad_glcore_46 API gl:core=4.6)
 
