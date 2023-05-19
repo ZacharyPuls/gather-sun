@@ -147,17 +147,17 @@ void state_handle_keyboard_input(int key, int scancode, int action, int mods) {
     // TODO: do I want to pass this to a menu keyboard callback? \
     //  menu_handle_keyboard_input(&pause_menu, key, scancode, action, mods);
     if (key == GLFW_KEY_ESCAPE && action == GLFW_RELEASE) {
-        uint64_t menu_to_modify = ui_get_active_menu(game_state.ui);
-        menu_to_modify = menu_to_modify == UINT64_MAX ? game_state.pause_menu_id : menu_to_modify;
+        uint64_t menu_id_to_close = ui_get_active_menu(game_state.ui);
+        menu_id_to_close = menu_id_to_close == UINT64_MAX ? game_state.pause_menu_id : menu_id_to_close;
 
-        menu_t menu = ui_get_menu(game_state.ui, menu_to_modify);
-        menu.active = !menu.active;
-        if (!menu.active) {
-            menu.visible = false;
+        menu_t menu_to_close = ui_get_menu(game_state.ui, menu_id_to_close);
+        menu_to_close.active = !menu_to_close.active;
+        if (!menu_to_close.active) {
+            menu_to_close.visible = false;
         } else {
-            menu.visible = true;
+            menu_to_close.visible = true;
         }
-        ui_update_menu(game_state.ui, menu_to_modify, menu);
+        ui_update_menu(game_state.ui, menu_id_to_close, menu_to_close);
 
         if (game_state.prev_active_menu_id != UINT64_MAX) {
             menu_t prev_active_menu = ui_get_menu(game_state.ui, game_state.prev_active_menu_id);
@@ -165,10 +165,10 @@ void state_handle_keyboard_input(int key, int scancode, int action, int mods) {
             ui_update_menu(game_state.ui, game_state.prev_active_menu_id, prev_active_menu);
             game_state.prev_active_menu_id = UINT64_MAX;
         } else {
-            game_state.prev_active_menu_id = menu_to_modify;
+            game_state.prev_active_menu_id = menu_id_to_close;
         }
 
-        if (menu.active) {
+        if (menu_to_close.active) {
             game_state.tick_active = false;
         }
     }
